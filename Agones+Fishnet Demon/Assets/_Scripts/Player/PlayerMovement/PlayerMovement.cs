@@ -1,18 +1,35 @@
 using FishNet.Object;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
+// Inherit from NetworkBehaviour instead of MonoBehaviour
 public class PlayerMovement : NetworkBehaviour
 {
-    [SerializeField] private float moveSpeed = 5f;
+    public float MoveSpeed = 5f;
+    private Vector2 _currentMovementInput;
 
-    private void Update()
+    public override void OnStartClient()
     {
-        if (!base.IsOwner) return;
+        if (IsOwner)
+            GetComponent<PlayerInput>().enabled = true;
+    }
 
-        float horizontal = Input.GetAxis("Horizontal");
-        float vertical = Input.GetAxis("Vertical");
+    public void OnMove(InputValue value)
+    {
+        _currentMovementInput = value.Get<Vector2>();
+    }
 
-        Vector3 movement = new Vector3(horizontal, 0, vertical) * moveSpeed * Time.deltaTime;
-        transform.position += movement;
+    public void Update()
+    {
+        // Only run this code on the object the local client owns.
+        // This prevents us from moving other players' objects.
+        if (!IsOwner)
+            return;
+
+        Vector3 moveDirection = new Vector3(_currentMovementInput.x, 0f, _currentMovementInput.y);
+        if (moveDirection.magnitude > 1f)
+            moveDirection.Normalize();
+
+        transform.position += MoveSpeed * Time.deltaTime * moveDirection;
     }
 }
